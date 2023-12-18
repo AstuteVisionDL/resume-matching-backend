@@ -18,8 +18,8 @@ app = FastAPI(
     lifespan=lifespan,
     title="Resume Matching",
     version="0.0.1",
-    docs_url="/docs",
-    redoc_url="/docs/redoc",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
 )
 
 app.include_router(api_router)
