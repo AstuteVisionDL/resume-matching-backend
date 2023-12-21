@@ -1,25 +1,47 @@
-from src.api.schemas import Resume, Vacancy, SalaryType, EducationType
-
+from src.api.schemas import Resume, Vacancy, SalaryType, EducationType, MoveType
+import math
 
 class MatchingService:
+
     @staticmethod
-    def salary_type_match(resume: Resume, vacancy: Vacancy) -> bool:
-        if resume.salary_type == vacancy.salary_type == SalaryType.range:
-            return (
-                    vacancy.min_value <= resume.min_value <= vacancy.max_value
-                    or
-                    vacancy.min_value <= resume.max_value <= vacancy.max_value
-            )
-        elif resume.salary_type == SalaryType.range and vacancy.salary_type == SalaryType.value:
-            return resume.min_value <= vacancy.value <= resume.max_value
-        elif resume.salary_type == SalaryType.value and vacancy.salary_type == SalaryType.range:
-            return vacancy.min_value <= resume.value <= vacancy.max_value
-        elif resume.salary_type == vacancy.salary_type == SalaryType.value:
-            return resume.value == vacancy.value
-        elif resume.salary_type == vacancy.salary_type == SalaryType.no:
-            return True
+    def find_move_correspondance(resume_move:MoveType, vacancy_move:MoveType, resume_city:str, vacancy_city: str):
+        if resume_city!=vacancy_city:
+            if vacancy_move==MoveType.no or resume_move==MoveType.no:
+                return 0
+            elif resume_move==MoveType.may_be and vacancy_move==MoveType.may_be:
+                return 0.5
+            else:
+                return 1
         else:
-            return False
+            if resume_move == MoveType.yes and vacancy_move == MoveType.yes:
+                return 0.25
+            elif resume_move == MoveType.yes or vacancy_move == MoveType.yes:
+                return 0.5
+            else:
+                return 1
+
+    @staticmethod
+    def find_salary_correspondance(vacancy_salary: float, cv_salary: float) -> float:
+        if (2*vacancy_salary<cv_salary):
+            return -1
+        elif (2*cv_salary<vacancy_salary):
+            return 1
+        else:
+            return (vacancy_salary-cv_salary)/min(cv_salary, vacancy_salary)
+
+
+    @staticmethod
+    def salary_type_match(resume: Resume, vacancy: Vacancy) -> float:
+        if resume.salary_type == vacancy.salary_type == SalaryType.range:
+            return MatchingService.find_salary_correspondance(vacancy.max_value, resume.max_value)
+        elif resume.salary_type == SalaryType.range and vacancy.salary_type == SalaryType.value:
+            return MatchingService.find_salary_correspondance(vacancy.value, resume.max_value)
+        elif resume.salary_type == SalaryType.value and vacancy.salary_type == SalaryType.range:
+            return MatchingService.find_salary_correspondance(vacancy.max_value, resume.value)
+        elif resume.salary_type == vacancy.salary_type == SalaryType.value:
+            return MatchingService.find_salary_correspondance(vacancy.value, resume.value)
+        return 0
+
 
     @staticmethod
     def education_match(resume_education: EducationType, vacancy_education: EducationType) -> bool:
@@ -55,14 +77,20 @@ class MatchingService:
         return n_inner / max(len(tokens1), len(tokens2))
 
     @staticmethod
-    def match(resume: Resume, vacancy: Vacancy) -> float:
-        city_match = resume.city == vacancy.city
+    def ml_similarity(word1: str, word2: str, model) -> float:
+        print(model.find_similarity(word1, word2))
+        return model.find_similarity(word1, word2)
+
+    @staticmethod
+    def match(resume: Resume, vacancy: Vacancy, model) -> float:
         employment_match = any(e_type in vacancy.employment for e_type in resume.employment)
         education_match = MatchingService.education_match(resume.education, vacancy.education)
         schedule_match = any(sh_type in vacancy.schedule for sh_type in resume.schedule)
-        move_match = resume.move == vacancy.move
+        move_match = MatchingService.find_move_correspondance(resume.move, vacancy.move,
+                                                              resume.city, vacancy.city)
         salary_type_match = MatchingService.salary_type_match(resume, vacancy)
-        if not all ([city_match, employment_match, education_match, schedule_match, move_match, salary_type_match]):
+        if not all ([employment_match, education_match, schedule_match, move_match]):
             return 0
         else:
-            return 100 * MatchingService.simply_similarity(resume.name, vacancy.name)
+            return max(0, 70 * MatchingService.ml_similarity(resume.name, vacancy.name, model)
+                       + 20 * salary_type_match + 10*move_match)
