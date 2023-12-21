@@ -7,6 +7,7 @@ from navec import Navec
 from razdel import tokenize
 import pymorphy2
 
+
 class NavecJobSimilarity(BaseJobSimilarity):
     """
     Extracts job title from resumes and generates embeddings for them.
@@ -14,7 +15,9 @@ class NavecJobSimilarity(BaseJobSimilarity):
 
     def __init__(self):
         if not os.path.exists("navec_hudlit_v1_12B_500K_300d_100q.tar"):
-            wget.download("https://storage.yandexcloud.net/natasha-navec/packs/navec_hudlit_v1_12B_500K_300d_100q.tar")
+            wget.download(
+                "https://storage.yandexcloud.net/natasha-navec/packs/navec_hudlit_v1_12B_500K_300d_100q.tar"
+            )
         self.navec = Navec.load("navec_hudlit_v1_12B_500K_300d_100q.tar")
         self.embedding_dim = 300
         self.morph = pymorphy2.MorphAnalyzer()
@@ -46,4 +49,3 @@ class NavecJobSimilarity(BaseJobSimilarity):
             self.navec[word.lower()]
             embedding += self.navec[word.lower()]
         return embedding / sentence_len
-
