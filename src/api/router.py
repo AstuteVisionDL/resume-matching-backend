@@ -1,7 +1,9 @@
 """Endpoints"""
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, FastAPI, Request
 from src.api.schemas import HealthCheckResponse, MatchingResponse, MatchingRequest
 from src.api.service import MatchingService
+from starlette_context import context, plugins
+
 
 router = APIRouter()
 
@@ -15,8 +17,8 @@ async def health_check():
 
 
 @router.post("/api/match", tags=["Matching"], response_model=MatchingResponse)
-async def matching(data: MatchingRequest = Body(embed=False)):
+async def matching(request: Request, data: MatchingRequest = Body(embed=False)):
     resume = data.resume
     vacancy = data.vacancy
-    score = MatchingService.match(resume, vacancy)
+    score = MatchingService.match(resume, vacancy, request.app.state.model)
     return MatchingResponse(value=score, message="Привет")
