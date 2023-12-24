@@ -1,8 +1,7 @@
 """Endpoints"""
-from fastapi import APIRouter, Body, FastAPI, Request
+from fastapi import APIRouter, Body, Request
 from src.api.schemas import HealthCheckResponse, MatchingResponse, MatchingRequest
 from src.api.service import MatchingService
-from starlette_context import context, plugins
 
 
 router = APIRouter()
